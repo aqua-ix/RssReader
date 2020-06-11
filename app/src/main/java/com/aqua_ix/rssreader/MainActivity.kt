@@ -1,5 +1,8 @@
 package com.aqua_ix.rssreader
 
+import android.app.job.JobInfo
+import android.app.job.JobScheduler
+import android.content.ComponentName
 import android.net.Uri
 import android.os.Bundle
 import androidx.appcompat.app.AppCompatActivity
@@ -8,6 +11,7 @@ import androidx.loader.app.LoaderManager
 import androidx.loader.content.Loader
 import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import java.util.concurrent.TimeUnit
 
 class MainActivity : AppCompatActivity(), LoaderManager.LoaderCallbacks<Rss> {
 
@@ -17,6 +21,22 @@ class MainActivity : AppCompatActivity(), LoaderManager.LoaderCallbacks<Rss> {
 
         // ローダーを呼び出す
         supportLoaderManager.initLoader(1, null, this)
+
+        // 通知チャンネルを作成する
+        createChannel(this)
+
+        // 定期的に新しい記事が無いかをチェックするジョブ
+        val fetchJob = JobInfo.Builder(
+            1, ComponentName(this, PollingJob::class.java)
+        )
+            .setPeriodic(TimeUnit.HOURS.toMillis(6)) // 6時間ごとに実行
+            .setPersisted(true) // 端末を再起動しても有効
+            // ネットワークに接続されていること
+            .setRequiredNetworkType(JobInfo.NETWORK_TYPE_ANY)
+            .build()
+
+        // ジョブを登録する
+        getSystemService(JobScheduler::class.java)?.schedule(fetchJob)
     }
 
     // ローダーが要求されたときに呼ばれる
